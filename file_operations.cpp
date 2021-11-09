@@ -7,8 +7,8 @@
 //! @param  [in]  name_file  name of file
 //!
 //! @return code error:
-			 _50_ if there are no errors
-			_-50_ if there are errors
+//!			 _50_ if there are no errors
+//!			_-50_ if there are errors
 //-------------------------------------------------------------------------------------------------------------------------
 
 int Open_File (FILE **stream, const char *name_file)
@@ -36,8 +36,8 @@ int Open_File (FILE **stream, const char *name_file)
 //! @param  [in]  name_file  name of file
 //!
 //! @return code error:
-			 _51_ if there are no errors
-			_-51_ if there are errors
+//!			 _51_ if there are no errors
+//!			_-51_ if there are errors
 //-------------------------------------------------------------------------------------------------------------------------
 
 int Close_File (FILE *stream, const char *name_file)
