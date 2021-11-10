@@ -3,27 +3,31 @@
 #include <stdlib.h>
 #include "stack.h"
 
+
+FILE *LOG_FILE = NULL;
+
 int main ()
 {
 	Stack stack;
 
-	FILE *stream_log = NULL;
-	OPEN_LOG_FILE(stream_log);
 
-	STACK_CTOR(&stack);
+	OPEN_LOG_FILE();
 
-	STACK_PUSH (&stack, 4, stream_log);
-	STACK_PUSH (&stack, 1, stream_log);
-	STACK_PUSH (&stack, 4, stream_log);
-	STACK_PUSH (&stack, 1, stream_log);
+	STACK_CTOR (&stack);
+
+	STACK_PUSH (&stack, 4);
+	STACK_PUSH (&stack, 1);
+	STACK_PUSH (&stack, 4);
+	STACK_PUSH (&stack, 1);
 
 	elem_t x = 0;
 
-	STACK_POP (&stack, &x, stream_log);
-	STACK_POP (&stack, &x, stream_log);
+	STACK_POP (&stack, &x);
+	STACK_POP (&stack, &x);
+	
+	STACK_DUMP (&stack);
+	STACK_DTOR (&stack);
 
-	STACK_DTOR (&stack, stream_log);
-
-	CLOSE_LOG_FILE(stream_log);
+	CLOSE_LOG_FILE();
 	return 0;
 }

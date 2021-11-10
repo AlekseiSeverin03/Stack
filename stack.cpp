@@ -1,5 +1,71 @@
 #include "stack.h"
 
+void StackCheck (Stack *stack_ptr)                                                                        
+{                                      	                                                                           
+	int code_error = 0;                     	                                                                       
+	int flag = 0;                                                                                                      
+		            	                                                                                               
+	if ((code_error = StackOk (stack_ptr)) == 0) {                                                                     
+        	                                                                                                           
+		;                                                                                                              
+            	                                                                                                       
+	} else {           	                                                                                               
+		            	                                                                                               
+		if (code_error == NULL_STACK_PTR) {                           		                                             
+		                                                                                                               
+			fprintf (LOG_FILE, "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");     
+			fprintf (LOG_FILE, "stack_ptr = NULL\n");  
+			fprintf (LOG_FILE, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");     
+		                                                                                                               
+			flag += 1;                                                                                                 
+	                                                                                                                  
+		}             	                                                                                              
+		            	                                                                                               
+		if (code_error == NULL_DATA_PTR) {                                                                               
+		                                                                                                               
+			fprintf (LOG_FILE, "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");     
+			fprintf (LOG_FILE, "data_ptr = NULL\n");   
+			fprintf (LOG_FILE, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");     
+                                                                                                                       
+			flag += 1;                                                                                                 
+	                                                                                                                   
+		}  			   	                                                                                              
+		            	                                                                                               
+		if (code_error == DATA_PTR_IS_ERR_PTR) {               		                                                   
+ 		        	                                                                                                   
+			fprintf (LOG_FILE, "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");     
+			fprintf (LOG_FILE, "data_ptr = ERR_PTR\n"); 
+			fprintf (LOG_FILE, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");     
+            	                                                                                                       
+			flag += 1;                                                                                                 
+                	                                                                                                   
+		}
+
+		if (code_error == BAD_HASH) {
+
+			fprintf (LOG_FILE, "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");     
+			fprintf (LOG_FILE, "stack has BAD_HASH\n"); 
+			fprintf (LOG_FILE, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");     
+            	                                                                                                       
+			flag += 1;                                                                                                 
+                	                                                                                                   
+		}
+		                                                                                                       
+		            	                                                                                               
+		fprintf (LOG_FILE, "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");     	   
+		fprintf (LOG_FILE, "ERROR in stack\n");                                                                 
+		fprintf (LOG_FILE, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");         
+		STACK_DUMP(stack_ptr);                                                                        
+                                                                                                                       
+		flag += 1;                                                                                            		   
+	}                                                                                                                  
+		            	                                                                                              
+	if (flag > 0)                                                                                                     
+	{                                                                                                                  
+		CLOSE_LOG_FILE();                                                                               
+		exit (1);                                          															   
+	}                                   																			   
+}
 
 //-------------------------------------------------------------------------------------------------------------------------
 //! Calc Hashes
@@ -11,6 +77,8 @@
 
 void CalcHashes (Stack *stack_ptr)
 {
+	assert (stack_ptr != NULL);
+
 	stack_ptr->hash_stack = 0;
 	stack_ptr->hash_data  = 0;
 
@@ -29,8 +97,10 @@ void CalcHashes (Stack *stack_ptr)
 //! @note this function can complete main program if hash will be bad
 //-------------------------------------------------------------------------------------------------------------------------
 
-void CheckHash (Stack *stack_ptr, FILE *stream)
+int CheckHash (Stack *stack_ptr)
 {
+	assert (stack_ptr != NULL);
+
 	char flag = 0;
 	hash_t tmp_hash_data = stack_ptr->hash_data;
 	hash_t tmp_hash_stack = stack_ptr->hash_stack;
@@ -52,13 +122,14 @@ void CheckHash (Stack *stack_ptr, FILE *stream)
 
 	if (flag != 0)
 	{
-		fprintf (stream, "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"); 
-		fprintf (stream, "WRONG_HASH (in funtion %s, line %d)\n", __PRETTY_FUNCTION__, __LINE__);    
-		fprintf (stream, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+		fprintf (LOG_FILE, "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"); 
+		fprintf (LOG_FILE, "WRONG_HASH (in funtion %s, line %d)\n", __PRETTY_FUNCTION__, __LINE__);    
+		fprintf (LOG_FILE, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 
-		CLOSE_LOG_FILE(stream);
-		exit (1); 
+		return BAD_HASH; 
 	}
+
+	return OKEY;
 }
 
 //-------------------------------------------------------------------------------------------------------------------------
@@ -103,10 +174,10 @@ static hash_t HashVar (const void *ptr_value, size_t nbyte, int *hash_coef)     
 //!
 //! @return code error:
 //!          _0_ if there are no errors;
-//!			_20_ if there are errors.
+//!			_not 0_ if there are errors.
 //-------------------------------------------------------------------------------------------------------------------------
 
-int StackOk (const Stack *stack_ptr)
+int StackOk (Stack *stack_ptr)
 {
 	if (stack_ptr == NULL) {
 
@@ -129,7 +200,10 @@ int StackOk (const Stack *stack_ptr)
 
    		return NOT_OKEY;
 
- 	} 
+ 	}else if (CheckHash (stack_ptr) == BAD_HASH) {
+	
+		return BAD_HASH;
+	}
 
 	return OKEY;
 }
@@ -146,6 +220,8 @@ int StackOk (const Stack *stack_ptr)
 
 static void PourPoison (elem_t *data, int size_data, int capacity)
 {
+	assert (data != NULL);
+
 	size_t current_pos	= size_data;
 	while (current_pos < capacity)
 	{
@@ -162,10 +238,10 @@ static void PourPoison (elem_t *data, int size_data, int capacity)
 //!
 //! @param  [in]  pointer on struct Stack
 //!
-//! @return void
+//! @return code error
 //-------------------------------------------------------------------------------------------------------------------------
 
-void StackCtor (Stack *stack_ptr)
+int StackCtor (Stack *stack_ptr)
 {
 	assert (stack_ptr != NULL);
 
@@ -176,7 +252,7 @@ void StackCtor (Stack *stack_ptr)
 	if (stack_ptr->data == NULL)
 	{
 		printf ("error allocation memory\n");
-		exit (1);
+		return ERR_ALLOCATION_MEMORY;
 	}
 
 	*((unsigned long long *)stack_ptr->data) = VALUE_DATA_CANARY;
@@ -190,7 +266,7 @@ void StackCtor (Stack *stack_ptr)
 
 	CalcHashes (stack_ptr);
 
-	return;
+	return OKEY;
 }
 
 //-------------------------------------------------------------------------------------------------------------------------
@@ -203,6 +279,8 @@ void StackCtor (Stack *stack_ptr)
 
 void StackDtor (Stack *stack_ptr)
 {
+	StackCheck (stack_ptr);
+
 	free ((char *)stack_ptr->data - SIZE_CANARY); 
 
 	stack_ptr->data = (elem_t *) ERR_PTR;
@@ -223,10 +301,14 @@ void StackDtor (Stack *stack_ptr)
 
 int StackPush (Stack *stack_ptr, elem_t value)
 {
+	StackCheck (stack_ptr);
+
 	if (stack_ptr->size >= stack_ptr->capacity)
 		{
 			if (StackResize (stack_ptr, stack_ptr->capacity * SPACE_FACTOR) != OKEY)
+			{
 				return ERR_ALLOCATION_MEMORY;
+			}
 		}
 
 	stack_ptr->data[stack_ptr->size] = value;
@@ -250,6 +332,8 @@ int StackPush (Stack *stack_ptr, elem_t value)
 
 int StackPop (Stack *stack_ptr, elem_t *ptr_place)	                //resize down
 {
+	StackCheck (stack_ptr);
+
 	if (stack_ptr->size == 0)
 		return EMP_STACK;
 
@@ -257,7 +341,15 @@ int StackPop (Stack *stack_ptr, elem_t *ptr_place)	                //resize down
 
 	*ptr_place = stack_ptr->data[stack_ptr->size];
 
-	stack_ptr->data[stack_ptr->size] = POISON;
+	if ((stack_ptr->size <= stack_ptr->capacity / REDUCTION_FACTOR) &&
+		(stack_ptr->capacity / REDUCTION_FACTOR >= INITIAL_CAPACITY))
+	{
+		StackResize (stack_ptr, stack_ptr->capacity / REDUCTION_FACTOR);
+	}
+	else
+	{
+		stack_ptr->data[stack_ptr->size] = POISON;
+	}
 
 	CalcHashes (stack_ptr);	
 	return OKEY;
@@ -276,19 +368,23 @@ int StackPop (Stack *stack_ptr, elem_t *ptr_place)	                //resize down
 
 int StackResize (Stack *stack_ptr, int new_capacity)
 {
+	StackCheck (stack_ptr);
 	assert (new_capacity >= 0);
 
 	stack_ptr->data = (elem_t *) realloc ((char *)(stack_ptr->data) - SIZE_CANARY, 
 										   new_capacity * sizeof (elem_t) + 2 * SIZE_CANARY);
 
 	if (stack_ptr->data == NULL)
+	{
 		return ERR_ALLOCATION_MEMORY;
+	}
 
 	stack_ptr->data = (elem_t *)((char *)(stack_ptr->data) + SIZE_CANARY);
 
 	PourPoison (stack_ptr->data, stack_ptr->size, new_capacity);
 
-	PutCanaryInEndMemory (stack_ptr->data, new_capacity);
+	*((unsigned long long *)((char *)stack_ptr->data +
+		 new_capacity * sizeof (elem_t))) = VALUE_DATA_CANARY;            // put canary in end memory for data
 
 	stack_ptr->capacity = new_capacity;
 
@@ -297,78 +393,59 @@ int StackResize (Stack *stack_ptr, int new_capacity)
 }
 
 //-------------------------------------------------------------------------------------------------------------------------
-//! Put canary of array stack in end array
-//!
-//! @param  [in]  data          pointer on 1st element array in stack
-//! @param  [in]  new_capacity  new capacity stack
-//!
-//! @return void
-//-------------------------------------------------------------------------------------------------------------------------
-
-void PutCanaryInEndMemory (elem_t *data, int new_capacity)
-{
-	assert (data != NULL);
-
-	*((unsigned long long *)((char *)data + new_capacity * sizeof (elem_t))) = VALUE_DATA_CANARY;
-
-
-	return;
-}
-
-//-------------------------------------------------------------------------------------------------------------------------
 //! Print all information about stack in stream
 //!
 //! @param  [in]  stack_ptr      pointer on struct stack
 //! @param  [in]  name_function  name somethink function
 //! @param  [in]  num_line       number line
-//! @param  [in]  stream         stream where will be print information
 //!
 //! @return void
 //-------------------------------------------------------------------------------------------------------------------------
 
-void StackDump (const Stack *stack_ptr, const char *name_function, const int num_line, FILE *stream)
+void StackDump (const Stack *stack_ptr, const char *name_function, 
+				const int num_line)
 {
-	fprintf (stream, "\n-----------------------------------------------------------\n");
-	fprintf (stream, "Dump from \"%s\" on line %d\n", name_function, num_line);
-	fprintf (stream, "-----------------------------------------------------------\n");
-	fprintf (stream, "ALL INFORMATION ABOUT STACK\n\n");
-	fprintf (stream, "Stack [%p] ()\n",                  stack_ptr);
-	fprintf (stream, "{\n");
-	fprintf (stream, "\tcanary1 = %0X\n",                stack_ptr->canary1);
-	fprintf (stream, "\tcanary2 = %0X\n",                stack_ptr->canary2);
-	fprintf (stream, "\tcapacity = %d\n",                stack_ptr->capacity);
-	fprintf (stream, "\tsize = %d\n",                    stack_ptr->size);
-	fprintf (stream, "\tdata [%p]\n",                    stack_ptr->data);
-	fprintf (stream, "\t{\n");
-	fprintf (stream, "\t\tcanary1' = %0llX\n",           *((unsigned long long *)((char *)stack_ptr->data - SIZE_CANARY)));
+	fprintf (LOG_FILE, "\n-----------------------------------------------------------\n");
+	fprintf (LOG_FILE, "Dump from \"%s\" on line %d\n", name_function, num_line);
+	fprintf (LOG_FILE, "-----------------------------------------------------------\n");
+	fprintf (LOG_FILE, "ALL INFORMATION ABOUT STACK\n\n");
+	fprintf (LOG_FILE, "Stack [%p] ()\n",                  stack_ptr);
+	fprintf (LOG_FILE, "{\n");
+	fprintf (LOG_FILE, "\tcanary1 = %0X\n",                stack_ptr->canary1);
+	fprintf (LOG_FILE, "\tcanary2 = %0X\n",                stack_ptr->canary2);
+	fprintf (LOG_FILE, "\tcapacity = %d\n",                stack_ptr->capacity);
+	fprintf (LOG_FILE, "\tsize = %d\n",                    stack_ptr->size);
+	fprintf (LOG_FILE, "\tdata [%p]\n",                    stack_ptr->data);
+	fprintf (LOG_FILE, "\t{\n");
+	fprintf (LOG_FILE, "\t\tcanary1' = %0llX\n",           *((unsigned long long *)((char *)stack_ptr->data - SIZE_CANARY)));
 
 	for (int i = 0; i < stack_ptr->size; i++)
 	{
-		fprintf (stream, "\t\t*[%03d] = " ELEM_FMT "\n", i, stack_ptr->data[i]);
+		fprintf (LOG_FILE, "\t\t*[%03d] = " ELEM_FMT "\n", i, stack_ptr->data[i]);
 	}
 
 	if (stack_ptr->size + 5 >= stack_ptr->capacity)
 	{
 		for (int i = stack_ptr->size; i < stack_ptr->capacity; i++)
 		{
-			fprintf (stream, "\t\t [%03d] = " ELEM_FMT "\n", i, stack_ptr->data[i]);
+			fprintf (LOG_FILE, "\t\t [%03d] = " ELEM_FMT "\n", i, stack_ptr->data[i]);
 		}
 	}
 	else
 	{
 		for (int i = 0; i < 3; i++)
 		{
-			fprintf (stream, "\t\t [%03d] = " ELEM_FMT "\n", i, stack_ptr->data[stack_ptr->size + i]);
+			fprintf (LOG_FILE, "\t\t [%03d] = " ELEM_FMT "\n", i, stack_ptr->data[stack_ptr->size + i]);
 		}
 	
-		fprintf (stream, "\t\t .....   ....\n");
-		fprintf (stream, "\t\t [%03d] = " ELEM_FMT "\n", stack_ptr->capacity - 1, stack_ptr->data[stack_ptr->capacity - 1]);
+		fprintf (LOG_FILE, "\t\t .....   ....\n");
+		fprintf (LOG_FILE, "\t\t [%03d] = " ELEM_FMT "\n", stack_ptr->capacity - 1, stack_ptr->data[stack_ptr->capacity - 1]);
 	}
 
-	fprintf (stream, "\t\tcanary2' = %0llX\n", *((unsigned long long *)((char *)stack_ptr->data + sizeof (elem_t) * stack_ptr->capacity)));
-	fprintf (stream, "\t}\n");
-	fprintf (stream, "}\n");
-	fprintf (stream, "-----------------------------------------------------------\n\n");
+	fprintf (LOG_FILE, "\t\tcanary2' = %0llX\n", *((unsigned long long *)((char *)stack_ptr->data + sizeof (elem_t) * stack_ptr->capacity)));
+	fprintf (LOG_FILE, "\t}\n");
+	fprintf (LOG_FILE, "}\n");
+	fprintf (LOG_FILE, "-----------------------------------------------------------\n\n");
 
 	return;
 }
